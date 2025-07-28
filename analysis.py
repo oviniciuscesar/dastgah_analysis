@@ -186,40 +186,6 @@ def jaccard_similarity(it2fs_A, it2fs_B):
     den = np.sum(np.maximum(it2fs_A['umf'], it2fs_B['umf'])) + np.sum(np.maximum(it2fs_A['lmf'], it2fs_B['lmf']))
     return num / den if den > 0 else 0.0
 
-# def analisar_fase_3_padroes_melodicos(df_performance_com_classes):
-#     """
-#     FASE 3: Analisa a sequência de notas para encontrar padrões melódicos específicos.
-#     (Versão corrigida para aceitar o argumento correto)
-#     """
-#     if df_performance_com_classes is None or df_performance_com_classes.empty or 'classe_teorica' not in df_performance_com_classes.columns:
-#         return {"total_repousos_tonica": 0, "articulacoes_pelo_2_grau": 0, "taxa_articulacao": 0}
-
-#     # Passo 1: Extrair a sequência de classes de notas
-#     sequencia_de_classes = df_performance_com_classes['classe_teorica'].tolist()
-#     duracoes = df_performance_com_classes['Ocorrências'].tolist()
-
-#     # Passo 2: Definir o que é uma "nota longa"
-#     if not duracoes:
-#         return {"total_repousos_tonica": 0, "articulacoes_pelo_2_grau": 0, "taxa_articulacao": 0}
-#     limiar_longa = np.percentile(duracoes, 75)
-
-#     # Passo 3: Buscar o padrão e contar
-#     total_repousos_tonica = 0
-#     articulacoes_pelo_2_grau = 0
-#     for i in range(1, len(sequencia_de_classes)):
-#         if sequencia_de_classes[i] == 0 and duracoes[i] >= limiar_longa:
-#             total_repousos_tonica += 1
-#             if sequencia_de_classes[i-1] == 1:
-#                 articulacoes_pelo_2_grau += 1
-    
-#     # Passo 4: Calcular a taxa de articulação
-#     taxa_articulacao = (articulacoes_pelo_2_grau / total_repousos_tonica) * 100 if total_repousos_tonica > 0 else 0
-    
-#     return {
-#         "total_repousos_tonica": total_repousos_tonica,
-#         "articulacoes_pelo_2_grau": articulacoes_pelo_2_grau,
-#         "taxa_articulacao": round(taxa_articulacao, 2)
-#     }
 
 def analisar_fase_3_padroes_melodicos(df_performance_com_classes):
     """
@@ -313,6 +279,62 @@ def imprimir_tabela_comparativa(res_humano, res_ia):
     print(df_esc.to_string(formatters=formatters_esc, na_rep='-'))
     print("="*80)
 
+def salvar_relatorio_completo_csv(res_humano, res_ia, padroes_humano, padroes_ia, output_dir):
+    """
+    Coleta todos os resultados da análise e os salva em um único arquivo CSV.
+    """
+    report_data = []
+
+    # 1. Score de Similaridade Global
+    report_data.append({
+        'Categoria': 'Score Global',
+        'Métrica': 'Similaridade Fuzzy Ponderada',
+        'Valor Humano': f"{res_humano.get('score', 0.0):.4f}",
+        'Valor IA': f"{res_ia.get('score', 0.0):.4f}"
+    })
+
+    # 2. Similaridade por Grau
+    for i, label in enumerate(SHUR_GRAUS_LABELS):
+        report_data.append({
+            'Categoria': 'Similaridade por Grau',
+            'Métrica': label,
+            'Valor Humano': f"{res_humano.get('similaridades', [0]*7)[i]:.3f}",
+            'Valor IA': f"{res_ia.get('similaridades', [0]*7)[i]:.3f}"
+        })
+
+    # 3. Estrutura da Escala (em Cents)
+    escala_h = res_humano.get('escala_relativa_cents', [])
+    escala_ia = res_ia.get('escala_relativa_cents', [])
+    max_len = max(len(SHUR_TEORICO_INTERVALOS), len(escala_h), len(escala_ia))
+    
+    for i in range(max_len):
+        report_data.append({
+            'Categoria': 'Estrutura da Escala (Cents)',
+            'Métrica': f'{i+1}º Grau',
+            'Valor Humano': f"{escala_h[i]:.2f}" if i < len(escala_h) else '-',
+            'Valor IA': f"{escala_ia[i]:.2f}" if i < len(escala_ia) else '-'
+        })
+
+    # 4. Padrões Melódicos (Sintaxe)
+    report_data.append({
+        'Categoria': 'Padrões Melódicos',
+        'Métrica': 'Taxa de Articulação GERAL (%)',
+        'Valor Humano': f"{padroes_humano.get('taxa_articulacao_geral', 0):.2f}",
+        'Valor IA': f"{padroes_ia.get('taxa_articulacao_geral', 0):.2f}"
+    })
+    report_data.append({
+        'Categoria': 'Padrões Melódicos',
+        'Métrica': 'Taxa de Articulação em REPOUSO (%)',
+        'Valor Humano': f"{padroes_humano.get('taxa_articulacao_repouso', 0):.2f}",
+        'Valor IA': f"{padroes_ia.get('taxa_articulacao_repouso', 0):.2f}"
+    })
+
+    # Cria o DataFrame e salva em CSV
+    df_reporte = pd.DataFrame(report_data)
+    output_path = os.path.join(output_dir, 'relatorio_analise_completa.csv')
+    df_reporte.to_csv(output_path, index=False)
+    print(f"\n>> Relatório completo salvo em formato CSV em: '{output_path}'")
+
 
 def plotar_dashboard_completo(res_humano, res_ia):
     plt.style.use('seaborn-v0_8-paper')
@@ -359,7 +381,7 @@ def plotar_dashboard_completo(res_humano, res_ia):
     plot_contorno(axs[0, 0], res_humano, "Humano")
     plot_contorno(axs[0, 1], res_ia, "IA")
     
-    # --- Painel de Intervalos (RESTAURADO) ---
+    # --- Painel de Intervalos ---
     ax3 = axs[1, 0]
     intervalos_h = res_humano.get('intervalos_quantizados', [])
     intervalos_ia = res_ia.get('intervalos_quantizados', [])
@@ -396,9 +418,14 @@ def plotar_dashboard_completo(res_humano, res_ia):
     ax4.legend()
     ax4.grid(axis='y', linestyle=':')
 
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    plots_dir = os.path.join(script_dir, 'out')
+    os.makedirs(plots_dir, exist_ok=True)
+    output_path = os.path.join(plots_dir, 'analise_completa.png')
+
     plt.tight_layout(rect=[0, 0, 1, 0.96])
-    plt.savefig("analise_completa.png", dpi=300)
-    print("\nAnálise completa salva como 'analise_completa.png'")
+    plt.savefig(output_path, dpi=300)
+    print(f"\nAnálise completa salva como '{output_path}'")
     plt.show()
 
 
@@ -406,9 +433,11 @@ def plotar_dashboard_completo(res_humano, res_ia):
 if __name__ == '__main__':
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# #     # Define os caminhos para os seus arquivos de áudio de forma robusta
-    audio_humano = os.path.join(script_dir, 'DastgahShur.wav')
-    audio_ia = os.path.join(script_dir, 'DastgahShurIA.wav')
+    # Define os caminhos para os seus arquivos de áudio
+    audio_dir = os.path.join(script_dir, 'audio')
+    audio_humano = os.path.join(audio_dir, 'DastgahShur.wav')
+    audio_ia = os.path.join(audio_dir, 'DastgahShurIA.wav')
+
     resultados_humano, resultados_ia = {}, {}
 
     for tipo, caminho in [("Humano", audio_humano), ("IA", audio_ia)]:
@@ -450,6 +479,10 @@ if __name__ == '__main__':
                     resultados_ia = resultado
     
     if resultados_humano and resultados_ia:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_dir = os.path.join(script_dir, 'out')
+        os.makedirs(output_dir, exist_ok=True)
+        
         imprimir_tabela_comparativa(resultados_humano, resultados_ia)
         plotar_dashboard_completo(resultados_humano, resultados_ia)
 
@@ -477,6 +510,7 @@ if __name__ == '__main__':
         print(f"  - Análise Geral: Das {padroes_ia['geral_total_tonicas']} vezes que a tônica foi tocada, {padroes_ia['geral_articulacoes']} foram precedidas pelo 2º grau.")
         print(f"    >> Taxa de Articulação GERAL (IA): {padroes_ia['taxa_articulacao_geral']}%")
         print("="*80)
+        salvar_relatorio_completo_csv(resultados_humano, resultados_ia, padroes_humano, padroes_ia, output_dir)
 
     else:
         print("\nNão foi possível gerar os resultados pois uma das análises falhou.")

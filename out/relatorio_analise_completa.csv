@@ -1,0 +1,18 @@
+Categoria,Métrica,Valor Humano,Valor IA
+Score Global,Similaridade Fuzzy Ponderada,0.5785,0.0985
+Similaridade por Grau,Tônica (Shur),0.712,0.011
+Similaridade por Grau,2º Grau (149c),0.318,0.441
+Similaridade por Grau,3º Grau (300c),0.378,0.113
+Similaridade por Grau,4º Grau (500c),0.370,0.286
+Similaridade por Grau,5º Grau (702c),0.000,0.133
+Similaridade por Grau,6º Grau (783c),0.000,0.387
+Similaridade por Grau,7º Grau (985c),0.000,0.000
+Estrutura da Escala (Cents),1º Grau,0.00,0.00
+Estrutura da Escala (Cents),2º Grau,126.50,278.37
+Estrutura da Escala (Cents),3º Grau,285.70,478.82
+Estrutura da Escala (Cents),4º Grau,503.65,594.67
+Estrutura da Escala (Cents),5º Grau,-,869.23
+Estrutura da Escala (Cents),6º Grau,-,924.03
+Estrutura da Escala (Cents),7º Grau,-,1271.74
+Padrões Melódicos,Taxa de Articulação GERAL (%),20.69,20.00
+Padrões Melódicos,Taxa de Articulação em REPOUSO (%),16.67,20.00
